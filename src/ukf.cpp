@@ -66,11 +66,53 @@ UKF::~UKF() {}
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     /**
-    TODO:
+    DONE:
 
     Complete this function! Make sure you switch between lidar and radar
     measurements.
     */
+    cout << "Start ProcessMeasurement()" << endl;
+    if (!is_initialized_) {
+        P_.fill(0.0);
+        P_(0, 0) = 1;
+        P_(1, 1) = 1;
+        P_(2, 2) = 1;
+        P_(3, 3) = 1;
+        P_(4, 4) = 1;
+
+        x_.fill(0.0);
+
+        if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+            double px = meas_package.raw_measurements_[0];
+            double py = meas_package.raw_measurements_[1];
+            x_ << px, py, 0, 0, 0;
+        } else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+            //Convert radar from polar to cartesian coordinates
+            double rho, phi, rho_dot;
+            rho = meas_package.raw_measurements_[0];
+            phi = meas_package.raw_measurements_[1];
+            rho_dot = meas_package.raw_measurements_[2];
+            x_ << rho * cos(phi), rho * sin(phi), 0, 0, 0;
+        }
+
+        time_us_ = meas_package.timestamp_;
+        // done initializing, no need to predict or update
+        is_initialized_ = true;
+
+        return;
+    }
+
+    float delta_t = (meas_package.timestamp_ - time_us_)/1000000.0; // delta_t in seconds
+    cout << "delta_t: " << delta_t << endl;
+    time_us_ = meas_package.timestamp_;
+
+    Prediction(delta_t);
+    if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+        UpdateLidar(meas_package);
+    } else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+        UpdateRadar(meas_package);
+    }
+    cout << "End ProcessMeasurement()" << endl;
 }
 
 /**
