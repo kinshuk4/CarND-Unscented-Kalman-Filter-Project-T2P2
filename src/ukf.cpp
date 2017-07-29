@@ -45,12 +45,17 @@ UKF::UKF() {
     std_radrd_ = 0.3;
 
     /**
-    TODO:
+    DONE:
 
     Complete the initialization. See ukf.h for other member properties.
 
     Hint: one or more values initialized above might be wildly off...
     */
+    // the current NIS for radar
+    NIS_radar_ = 0.0;
+
+    // the current NIS for laser
+    NIS_laser_ = 0.0;
 }
 
 UKF::~UKF() {}
