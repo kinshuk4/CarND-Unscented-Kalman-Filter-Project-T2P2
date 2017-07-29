@@ -3,3 +3,9 @@
 
 # build files
 build/
+
+ide_profiles/xcode/Debug/
+ide_profiles/xcode/ExtendedKF.build/
+
+.idea/
+cmake-build-debug/
