@@ -45,3 +45,8 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
     //return the result
     return rmse;
 }
+
+void Tools::normalize_angle(double &angle) {
+    while (angle > M_PI) angle -= 2. * M_PI;
+    while (angle < -M_PI) angle += 2. * M_PI;
+}

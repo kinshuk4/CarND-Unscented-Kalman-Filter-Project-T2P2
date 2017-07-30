@@ -1,11 +1,13 @@
 #include "ukf.h"
 #include "Eigen/Dense"
 #include <iostream>
+#include "tools.h"
 
 using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
+
 
 /**
  * Initializes Unscented Kalman filter
@@ -56,6 +58,17 @@ UKF::UKF() {
 
     // the current NIS for laser
     NIS_laser_ = 0.0;
+
+    is_initialized_ = false;
+    n_x_ = 5;
+    n_aug_ = 7;
+    lambda_ = 3 - n_aug_;
+
+    weights_ = VectorXd(2 * n_aug_ + 1);
+    weights_(0) = lambda_ / (lambda_ + n_aug_);
+    for (int i = 1; i < weights_.size(); i++) {
+        weights_(i) = 1 / (2 * (lambda_ + n_aug_));
+    }
 }
 
 UKF::~UKF() {}
@@ -102,7 +115,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         return;
     }
 
-    float delta_t = (meas_package.timestamp_ - time_us_)/1000000.0; // delta_t in seconds
+    float delta_t = (meas_package.timestamp_ - time_us_) / 1000000.0; // delta_t in seconds
     cout << "delta_t: " << delta_t << endl;
     time_us_ = meas_package.timestamp_;
 
@@ -122,11 +135,124 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
  */
 void UKF::Prediction(double delta_t) {
     /**
-    TODO:
+    DONE:
 
     Complete this function! Estimate the object's location. Modify the state
     vector, x_. Predict sigma points, the state, and the state covariance matrix.
     */
+    cout << "Start Prediction()" << endl;
+
+    Tools tools;
+
+    // Generate augmented sigma points
+    VectorXd x_aug = VectorXd(n_aug_);//Create augmented mean vector
+    MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);//Create augmented state covariance
+
+    x_aug.fill(0.0);
+    P_aug.fill(0.0);
+
+    //Create sigma point matrix
+    MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+    Xsig_aug.fill(0.0);
+
+
+    //Create augmented mean state
+    x_aug.head(n_x_) = x_;
+    x_aug(5) = 0;
+    x_aug(6) = 0;
+
+    //Create augmented covariance matrix
+    MatrixXd Q = MatrixXd(2, 2);
+    Q << std_a_ * std_a_, 0,
+            0, std_yawdd_ * std_yawdd_;
+
+    P_aug.topLeftCorner(n_x_, n_x_) = P_;
+    P_aug.bottomRightCorner(2, 2) = Q;
+
+    //Create square root matrix
+    MatrixXd P_aug_sqrt = P_aug.llt().matrixL();
+
+    //Create augmented sigma points
+    Xsig_aug.col(0) = x_aug;
+    for (int i = 0; i < n_aug_; i++) {
+        Xsig_aug.col(i + 1) = x_aug + sqrt(lambda_ + n_aug_) * P_aug_sqrt.col(i);
+        Xsig_aug.col(i + 1 + n_aug_) = x_aug - sqrt(lambda_ + n_aug_) * P_aug_sqrt.col(i);
+    }
+
+    //Predict state by predicting new new Xsig_pred
+
+
+    VectorXd change = VectorXd(5);
+    VectorXd new_state = VectorXd(5);
+    for (int i = 0; i < Xsig_pred_.cols(); i++) {
+        VectorXd curr_sigma_point = Xsig_aug.col(i);
+        VectorXd curr_state = curr_sigma_point.head(5);
+
+        double v = curr_sigma_point(2);
+        double psi = curr_sigma_point(3); // yaw
+        double psi_dot = curr_sigma_point(4); // yaw dot
+        double nu_a = curr_sigma_point(5);
+        double nu_psi_dot_dot = curr_sigma_point(6);
+
+        double delta_t_pow = delta_t * delta_t;
+
+        VectorXd noise = VectorXd(5);
+        noise(0) = 0.5 * delta_t_pow * cos(psi) * nu_a;
+        noise(1) = 0.5 * delta_t_pow * sin(psi) * nu_a;
+        noise(2) = delta_t * nu_a;
+        noise(3) = 0.5 * delta_t_pow * nu_psi_dot_dot;
+        noise(4) = delta_t * nu_psi_dot_dot;
+
+        if (psi_dot == 0) {
+            change(0) = v * cos(psi) * delta_t;
+            change(1) = v * sin(psi) * delta_t;
+            change(2) = 0;
+            change(3) = psi_dot * delta_t;
+            change(4) = 0;
+        } else {
+            double v_psi = v / psi_dot;
+            double new_psi = psi + psi_dot * delta_t;
+            change(0) = v_psi * (sin(new_psi) - sin(psi));
+            change(1) = v_psi * (-cos(new_psi) + cos(psi));
+            change(2) = 0;
+            change(3) = psi_dot * delta_t;
+            change(4) = 0;
+        }
+        new_state = curr_state + change + noise;
+        Xsig_pred_.col(i) = new_state;
+    }
+
+    // Reset and predict state mean and state covariance matrix
+    x_.fill(0.0);
+    P_.fill(0.0);
+
+    //set weights
+    for (int i = 0; i < weights_.rows(); i++) {
+        if (i == 0) {
+            weights_(i) = lambda_ / (lambda_ + n_aug_);
+        } else {
+            weights_(i) = 1 / (2 * (lambda_ + n_aug_));
+        }
+    }
+
+    //predicted state mean
+    for (int j = 0; j < Xsig_pred_.cols(); j++) {
+        x_ += weights_(j) * Xsig_pred_.col(j);
+    }
+
+    //predict state covariance matrix
+    for (int j = 0; j < Xsig_pred_.cols(); j++) {
+        VectorXd x_diff = Xsig_pred_.col(j) - x_;
+
+        tools.normalize_angle(x_diff(3));
+
+        P_ += weights_(j) * x_diff * x_diff.transpose();
+    }
+    
+    cout << "x" << endl << x_ << endl;
+    cout << "P" << endl << P_ << endl;
+
+    cout << "End Prediction()" << endl;
 }
 
 /**
