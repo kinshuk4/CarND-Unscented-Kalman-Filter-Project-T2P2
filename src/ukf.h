@@ -107,6 +107,7 @@ public:
      * @param meas_package The measurement at k+1
      */
     void UpdateRadar(MeasurementPackage meas_package);
+    void Update(MatrixXd Zsig, MatrixXd R, MeasurementPackage meas_package);
 };
 
 #endif /* UKF_H */
