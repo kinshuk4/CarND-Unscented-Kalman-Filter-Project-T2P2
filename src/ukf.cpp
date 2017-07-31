@@ -26,10 +26,10 @@ UKF::UKF() {
     P_ = MatrixXd(5, 5);
 
     // Process noise standard deviation longitudinal acceleration in m/s^2
-    std_a_ = 30;
+    std_a_ = 2;
 
     // Process noise standard deviation yaw acceleration in rad/s^2
-    std_yawdd_ = 30;
+    std_yawdd_ = M_PI / 10;
 
     // Laser measurement noise standard deviation position1 in m
     std_laspx_ = 0.15;
@@ -239,7 +239,14 @@ void UKF::Prediction(double delta_t) {
     x_.fill(0.0);
     P_.fill(0.0);
 
-
+    //reset weights
+    for (int i = 0; i < weights_.rows(); i++) {
+        if (i == 0) {
+            weights_(i) = lambda_ / (lambda_ + n_aug_);
+        } else {
+            weights_(i) = 1 / (2 * (lambda_ + n_aug_));
+        }
+    }
     //predicted state mean
     x_ = Xsig_pred_ * weights_;
 
@@ -317,9 +324,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
         Zsig(0, i) = sqrt_p_sum;
         if (p_x == 0 && p_y == 0) {
             cout << "atan2(0,0) is undefined as px and py are 0, set phi for col " << i << " to 0" << endl;
-            Zsig(1,i) = 0;
+            Zsig(1, i) = 0;
         } else {
-            Zsig(1,i) = atan2(p_y, p_x);
+            Zsig(1, i) = atan2(p_y, p_x);
 //            tools.NormalizeAngle(Zsig(1,i));
         }
         Zsig(2, i) = ((p_x * cos(psi) * v) + (p_y * sin(psi) * v)) / sqrt_p_sum;
