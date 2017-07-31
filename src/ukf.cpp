@@ -256,16 +256,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     int n_z = 2;
 
     //create matrix for sigma points in measurement space
-    MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
-    Zsig.fill(0.0);
+    MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, 2 * n_aug_ + 1);
 
-    //transform sigma points into measurement space
-    for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
-
-        //measurement model
-        Zsig(0,i) = Xsig_pred_(0,i);
-        Zsig(1,i) = Xsig_pred_(1,i);
-    }
 
     MatrixXd R = MatrixXd(n_z,n_z);
     R.fill(0.0);
