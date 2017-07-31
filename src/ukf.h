@@ -64,6 +64,10 @@ public:
     ///* Augmented state dimension
     int n_aug_;
 
+    ///*n_sig_ = 2 * n_aug_ +1
+    int n_sig_;
+
+
     ///* Sigma point spreading parameter
     double lambda_;
 
@@ -72,6 +76,8 @@ public:
 
     ///* the current NIS for laser
     double NIS_laser_;
+
+
 
     MatrixXd R_laser_;
     MatrixXd R_radar_;

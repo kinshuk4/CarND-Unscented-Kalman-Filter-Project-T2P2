@@ -46,6 +46,8 @@ UKF::UKF() {
     // Radar measurement noise standard deviation radius change in m/s
     std_radrd_ = 0.3;
 
+
+
     /**
     DONE:
 
@@ -64,9 +66,10 @@ UKF::UKF() {
     n_x_ = 5;
     n_aug_ = 7;
     lambda_ = 3 - n_aug_;
+    n_sig_ = 2 * n_aug_ + 1;
 
-    Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
-
+    Xsig_pred_ = MatrixXd(n_x_, n_sig_);
+    weights_ = VectorXd(n_sig_);
     weights_.fill(0.5 * (lambda_ + n_aug_));
     weights_(0) = lambda_ / (lambda_ + n_aug_);
 
@@ -82,6 +85,7 @@ UKF::UKF() {
     R_radar_(0, 0) = std_radr_ * std_radr_;
     R_radar_(1, 1) = std_radphi_ * std_radphi_;
     R_radar_(2, 2) = std_radrd_ * std_radrd_;
+
 
 }
 
@@ -161,7 +165,7 @@ void UKF::Prediction(double delta_t) {
     P_aug.fill(0.0);
 
     //Create sigma point matrix
-    MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+    MatrixXd Xsig_aug = MatrixXd(n_aug_, n_sig_);
     Xsig_aug.fill(0.0);
 
 
@@ -270,7 +274,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     int n_z = 2;
 
     //create matrix for sigma points in measurement space
-    MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, 2 * n_aug_ + 1);
+    MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, n_sig_);
 
     Update(Zsig, R_laser_, meas_package);
 }
@@ -291,7 +295,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     int n_z = 3;
     Tools tools;
     //create matrix for sigma points in measurement space
-    MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
+    MatrixXd Zsig = MatrixXd(n_z, n_sig_);
     Zsig.fill(0.0);
 
     double p_x;
