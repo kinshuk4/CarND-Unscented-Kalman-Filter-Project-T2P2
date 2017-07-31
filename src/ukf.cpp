@@ -202,13 +202,13 @@ void UKF::Prediction(double delta_t) {
         VectorXd curr_sigma_point = Xsig_aug.col(i);
         VectorXd curr_state = curr_sigma_point.head(5);
 
-        double v = curr_sigma_point(2);
-        double psi = curr_sigma_point(3); // yaw
-        double psi_dot = curr_sigma_point(4); // yaw dot
-        double nu_a = curr_sigma_point(5);
-        double nu_psi_dot_dot = curr_sigma_point(6);
+        const double v = curr_sigma_point(2);
+        const double psi = curr_sigma_point(3); // yaw
+        const double psi_dot = curr_sigma_point(4); // yaw dot
+        const double nu_a = curr_sigma_point(5);
+        const double nu_psi_dot_dot = curr_sigma_point(6);
 
-        double delta_t_pow = delta_t * delta_t;
+        const double delta_t_pow = delta_t * delta_t;
 
         VectorXd noise = VectorXd(5);
         noise(0) = 0.5 * delta_t_pow * cos(psi) * nu_a;
@@ -224,8 +224,8 @@ void UKF::Prediction(double delta_t) {
             change(3) = psi_dot * delta_t;
             change(4) = 0;
         } else {
-            double v_psi = v / psi_dot;
-            double new_psi = psi + psi_dot * delta_t;
+            const double v_psi = v / psi_dot;
+            const double new_psi = psi + psi_dot * delta_t;
             change(0) = v_psi * (sin(new_psi) - sin(psi));
             change(1) = v_psi * (-cos(new_psi) + cos(psi));
             change(2) = 0;
