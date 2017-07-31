@@ -220,15 +220,7 @@ void UKF::Prediction(double delta_t) {
     // Reset and predict state mean and state covariance matrix
     x_.fill(0.0);
     P_.fill(0.0);
-
-    //set weights
-    for (int i = 0; i < weights_.rows(); i++) {
-        if (i == 0) {
-            weights_(i) = lambda_ / (lambda_ + n_aug_);
-        } else {
-            weights_(i) = 1 / (2 * (lambda_ + n_aug_));
-        }
-    }
+    
 
     //predicted state mean
     for (int j = 0; j < Xsig_pred_.cols(); j++) {
