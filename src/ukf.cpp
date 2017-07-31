@@ -267,6 +267,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
     You'll also need to calculate the lidar NIS.
     */
+    int n_z = 2;
 
     //create matrix for sigma points in measurement space
     MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, 2 * n_aug_ + 1);
@@ -314,9 +315,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
             cout << "atan2(0,0) is undefined as px and py are 0, set phi for col " << i << " to 0" << endl;
             Zsig(1,i) = 0;
         } else {
-            Zsig(1,i) = tools.NormalizeAngle(atan2(p_y, p_x));
+            Zsig(1,i) = atan2(p_y, p_x);
+//            tools.NormalizeAngle(Zsig(1,i));
         }
-        Zsig(1, i) = ;
         Zsig(2, i) = ((p_x * cos(psi) * v) + (p_y * sin(psi) * v)) / sqrt_p_sum;
     }
 
