@@ -288,7 +288,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     You'll also need to calculate the radar NIS.
     */
     int n_z = 3;
-
+    Tools tools;
     //create matrix for sigma points in measurement space
     MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
     Zsig.fill(0.0);
@@ -310,7 +310,13 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
         sqrt_p_sum = sqrt(p_x * p_x + p_y * p_y);
 
         Zsig(0, i) = sqrt_p_sum;
-        Zsig(1, i) = atan2(p_y, p_x);
+        if (p_x == 0 && p_y == 0) {
+            cout << "atan2(0,0) is undefined as px and py are 0, set phi for col " << i << " to 0" << endl;
+            Zsig(1,i) = 0;
+        } else {
+            Zsig(1,i) = tools.NormalizeAngle(atan2(p_y, p_x));
+        }
+        Zsig(1, i) = ;
         Zsig(2, i) = ((p_x * cos(psi) * v) + (p_y * sin(psi) * v)) / sqrt_p_sum;
     }
 
