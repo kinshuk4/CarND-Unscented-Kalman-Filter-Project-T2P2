@@ -67,11 +67,8 @@ UKF::UKF() {
 
     Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
-    weights_ = VectorXd(2 * n_aug_ + 1);
+    weights_.fill(0.5 * (lambda_ + n_aug_));
     weights_(0) = lambda_ / (lambda_ + n_aug_);
-    for (int i = 1; i < weights_.size(); i++) {
-        weights_(i) = 1 / (2 * (lambda_ + n_aug_));
-    }
 }
 
 UKF::~UKF() {}
