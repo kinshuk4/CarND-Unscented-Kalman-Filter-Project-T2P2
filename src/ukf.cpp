@@ -69,6 +69,20 @@ UKF::UKF() {
 
     weights_.fill(0.5 * (lambda_ + n_aug_));
     weights_(0) = lambda_ / (lambda_ + n_aug_);
+
+    int n_z = 2;
+    R_laser_ = MatrixXd(n_z, n_z);
+    R_laser_.fill(0.0);
+    R_laser_(0, 0) = std_laspx_ * std_laspx_;
+    R_laser_(1, 1) = std_laspy_ * std_laspy_;
+
+    n_z = 3;
+    R_radar_ = MatrixXd(n_z, n_z);
+    R_radar_.fill(0.0);
+    R_radar_(0, 0) = std_radr_ * std_radr_;
+    R_radar_(1, 1) = std_radphi_ * std_radphi_;
+    R_radar_(2, 2) = std_radrd_ * std_radrd_;
+
 }
 
 UKF::~UKF() {}
@@ -253,18 +267,11 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
     You'll also need to calculate the lidar NIS.
     */
-    int n_z = 2;
 
     //create matrix for sigma points in measurement space
     MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, 2 * n_aug_ + 1);
 
-
-    MatrixXd R = MatrixXd(n_z,n_z);
-    R.fill(0.0);
-    R(0,0) = std_laspx_*std_laspx_;
-    R(1,1) = std_laspy_*std_laspy_;
-
-    Update(Zsig, R, meas_package);
+    Update(Zsig, R_laser_, meas_package);
 }
 
 /**
@@ -293,35 +300,30 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     double psi_dot;
     double sqrt_p_sum;
     //transform sigma points into measurement space
-    for(int i = 0; i < Xsig_pred_.cols(); i++) {
+    for (int i = 0; i < Xsig_pred_.cols(); i++) {
         p_x = Xsig_pred_(0, i);
         p_y = Xsig_pred_(1, i);
         v = Xsig_pred_(2, i);
         psi = Xsig_pred_(3, i);
         psi_dot = Xsig_pred_(4, i);
 
-        sqrt_p_sum = sqrt(p_x*p_x + p_y*p_y);
+        sqrt_p_sum = sqrt(p_x * p_x + p_y * p_y);
 
         Zsig(0, i) = sqrt_p_sum;
         Zsig(1, i) = atan2(p_y, p_x);
-        Zsig(2, i) = ((p_x * cos(psi) * v) + (p_y * sin(psi) * v))/ sqrt_p_sum;
+        Zsig(2, i) = ((p_x * cos(psi) * v) + (p_y * sin(psi) * v)) / sqrt_p_sum;
     }
 
-    MatrixXd R = MatrixXd(n_z, n_z);
-    R.fill(0.0);
-    R(0,0) = std_radr_ * std_radr_;
-    R(1,1) = std_radphi_ * std_radphi_;
-    R(2,2) = std_radrd_ * std_radrd_;
 
-    Update(Zsig, R, meas_package);
+    Update(Zsig, R_radar_, meas_package);
 }
 
-void UKF::Update(MatrixXd Zsig, MatrixXd R, MeasurementPackage meas_package){
+void UKF::Update(MatrixXd Zsig, MatrixXd R, MeasurementPackage meas_package) {
     Tools tools;
     int n_z = Zsig.rows();
 
     //Measurement covariance matrix
-    MatrixXd S = MatrixXd(n_z,n_z);
+    MatrixXd S = MatrixXd(n_z, n_z);
     S.fill(0.0);
 
     //Mean predicted measurement
@@ -329,11 +331,11 @@ void UKF::Update(MatrixXd Zsig, MatrixXd R, MeasurementPackage meas_package){
     z_pred.fill(0.0);
 
     //calculate mean predicted measurement
-    for(int i = 0; i < Zsig.cols(); i++){
+    for (int i = 0; i < Zsig.cols(); i++) {
         z_pred += weights_(i) * Zsig.col(i);
     }
 
-    for(int i = 0; i < Zsig.cols(); i++){
+    for (int i = 0; i < Zsig.cols(); i++) {
         VectorXd z_diff = VectorXd(n_z);
         z_diff = Zsig.col(i) - z_pred;
 
@@ -354,7 +356,7 @@ void UKF::Update(MatrixXd Zsig, MatrixXd R, MeasurementPackage meas_package){
 
     Tc.fill(0.0);
     //calculate cross correlation matrix
-    for(int i = 0; i < Zsig.cols(); i++) {
+    for (int i = 0; i < Zsig.cols(); i++) {
         VectorXd x_diff = Xsig_pred_.col(i) - x_;
         tools.NormalizeAngle(x_diff(3));
 
@@ -376,10 +378,10 @@ void UKF::Update(MatrixXd Zsig, MatrixXd R, MeasurementPackage meas_package){
     P_ = P_ - K * S * K.transpose();
 
     //calculate the Normalized Innovation Square
-    if(meas_package.sensor_type_ == MeasurementPackage::RADAR){
-        NIS_radar_= z_diff.transpose() * S.inverse() * z_diff;
-    }else{
-        NIS_laser_= z_diff.transpose() * S.inverse() * z_diff;
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+        NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
+    } else {
+        NIS_laser_ = z_diff.transpose() * S.inverse() * z_diff;
     }
 
 }
